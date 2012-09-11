@@ -1,11 +1,18 @@
 """
-efiutils.py - some utility functions to aid with the reverse engineering of EFI executables.
+efiutils.py
+
+Some utility functions to aid with the reverse engineering of EFI executables.
+
+See the following URL for more info and the latest version:
+https://github.com/snarez/ida-efiutils
 """
 
+import re
+import struct
 from idaapi import *
 from idautils import *
 from idc import *
-import re
+import efiguids
 
 MAX_STACK_DEPTH = 1
 IMAGE_HANDLE_NAME       = 'gImageHandle'
@@ -16,6 +23,47 @@ BOOT_SERVICES_STRUCT    = 'EFI_BOOT_SERVICES'
 RUNTIME_SERVICES_NAME   = 'gRuntimeServices'
 RUNTIME_SERVICES_STRUCT = 'EFI_RUNTIME_SERVICES'
 
+local_guids = { }
+
+class GUID:
+    Data1 = None
+    Data2 = None
+    Data3 = None
+    Data4 = None
+
+    def __init__(self, default=None, bytes=None, string=None, array=None):
+        if isinstance(default, basestring):
+            string = default
+        elif isinstance(default, list):
+            array = default
+
+        if bytes != None:
+            (self.Data1, self.Data2, self.Data3, d40, d41, d42, d43, d44, d45, d46, d47) = \
+                struct.unpack("<IHH8B", bytes)
+            self.Data4 = [d40, d41, d42, d43, d44, d45, d46, d47]
+            self.bytes = bytes
+        elif string != None:
+            s = string.split('-')
+            self.Data1 = int(s[0], 16)
+            self.Data2 = int(s[1], 16)
+            self.Data3 = int(s[2], 16)
+            self.Data4 = struct.unpack('BBBBBBBB', struct.pack('>Q', int(''.join(s[3:]), 16)))
+        elif array != None:
+            (self.Data1, self.Data2, self.Data3, self.Data4) = (array[0], array[1], array[2], array[3:])
+
+    def __str__(self):
+        d = self.Data4
+        return "%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x" % tuple(self.array())
+
+    def bytes(self):
+        return self.bytes
+
+    def string(self):
+        return str(self)
+
+    def array(self):
+        d = self.Data4
+        return [self.Data1, self.Data2, self.Data3, d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7]]
 
 def go():
     rename_tables()
@@ -46,7 +94,7 @@ def rename_tables():
 def rename_tables_internal(function, regs, stackdepth=0):
     names = {'im': IMAGE_HANDLE_NAME, 'st': SYSTEM_TABLE_NAME, 'bs': BOOT_SERVICES_NAME, 'rs': RUNTIME_SERVICES_NAME}
 
-    print "Processing function at " + str(function)
+    print "Processing function at 0x%x" % function
  
     for item in FuncItems(function):
         #print "regs = " + str(regs)
@@ -116,7 +164,7 @@ def update_struct_offsets(data_addr, struct_name):
     references to function pointers in EFI tables.
 
     For example:
-    mov     rax, cs:gBootServices
+    mov     rax, cs:qword_whatever
     call    qword ptr [rax+150h]
 
     Becomes:
@@ -137,10 +185,10 @@ def update_struct_offsets(data_addr, struct_name):
         # We're only interested in xrefs in code where the left operand is a register, and the right operand is the
         # memory address of our data structure.
         if GetOpType(xref, 0) == o_reg and GetOpType(xref, 1) == o_mem or GetOperandValue(xref, 1) == struct_name:
-            print "Processing xref from %d: %s" % (xref, GetDisasm(xref))
+            print "Processing xref from 0x%x: %s" % (xref, GetDisasm(xref))
             update_struct_offsets_for_xref(xref, struct_name)
         else:
-            print "Too hard basket - xref from %d: %s" % (xref, GetDisasm(xref))
+            print "Too hard basket - xref from 0x%x: %s" % (xref, GetDisasm(xref))
 
 
 def update_struct_offsets_for_xref(xref, struct_name):
@@ -160,7 +208,7 @@ def update_struct_offsets_for_xref(xref, struct_name):
         idx = items.index(xref)+1
         items = items[idx:]
     else:
-        print "  - Xref %d wasn't marked as a function" % xref
+        print "  - Xref at 0x%x wasn't marked as a function" % xref
         cur = xref
         while True:
             if not isCode(cur) or GetMnem(cur) in ['call', 'jmp']:
@@ -180,7 +228,7 @@ def update_struct_offsets_for_xref(xref, struct_name):
         for reg in regs['hndl']:
             if GetOpnd(item, 1) == "[%s]" % reg and GetMnem(item) == 'mov' and GetOpnd(item, 0) not in regs:
                 print "  - Found a dereference, tracking register %s" % GetOpnd(item, 0)
-                regs['mov'].append(GetOpnd(item, 0))
+                regs['ptr'].append(GetOpnd(item, 0))
 
         # If we've found an instruction that overwrites a tracked register, stop tracking it
         if GetMnem(item) in ["mov", "lea", "xor"] and GetOpType(item, 0) == o_reg:
@@ -200,6 +248,47 @@ def update_struct_offsets_for_xref(xref, struct_name):
             break
 
 
+def rename_guids():
+    # Load GUIDs
+    guids = dict((str(GUID(array=v)),k) for k, v in efiguids.GUIDs.iteritems())
+    guids.update(dict((v,k) for k, v in local_guids.iteritems()))
+
+    # Find all the data segments in this binary
+    for seg in Segments():
+        if isData(seg) or SegName(seg).startswith('.data'):
+            print "Processing data segment at 0x%x" % seg
+
+            # Find any GUIDs we know about in the data segment
+            addr = seg
+            seg_end = SegEnd(seg)
+            while addr < seg_end:
+                d = [Qword(addr), Qword(addr+8)]
+                if d[0] == 0 and d[1] == 0 or d[0] == 0xFFFFFFFFFFFFFFFF and d[1] == 0xFFFFFFFFFFFFFFFF:
+                     pass
+                else:
+                    guid = GUID(bytes=struct.pack("<QQ", d[0], d[1]))
+                    #print "Checking GUID %s at 0x%x" % (str(guid), addr) 
+                    gstr = str(guid)
+                    if gstr in guids.keys():
+                        print "  - Found GUID %s (%s) at 0x%x" % (gstr, guids[gstr], addr)
+                        MakeName(addr, underscore_to_global(guids[gstr]))
+                addr += 0x08
+        else:
+            print "Skipping non-data segment at 0x%x" % seg
+
+
+def update_protocols():
+    pass
+
+
+def update_protocol_for_guid(guid_addr):
+    pass
+
+
+def guid_at_addr(guid_addr):
+    return GUID(bytes=struct.pack("<QQ", Qword(guid_addr), Qword(guid_addr+8)))
+
+
 def reg_from_displ(displ):
     """
     Return the register to which a displacement is relative.
@@ -208,3 +297,7 @@ def reg_from_displ(displ):
     """
     m = re.match(r'.*\[(.*)[\+\-]', displ)
     return m.group(1)
+
+
+def underscore_to_global(name):
+    return 'g'+''.join(list(s.capitalize() for s in name.lower().split('_')))
