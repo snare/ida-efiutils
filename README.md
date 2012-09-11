@@ -43,7 +43,7 @@ Becomes:
 	    mov     rax, cs:gBootServices
 	    call    [rax+EFI_BOOT_SERVICES.UninstallMultipleProtocolInterfaces]
 
-### `rename_guids()
+### `rename_guids()`
 
 Finds GUIDs in data segments and renames them. 470 protocol GUIDs were pulled out of the TianoCore source, and proprietary Apple (and other vendor) GUIDs will be added as they are encountered.
 
