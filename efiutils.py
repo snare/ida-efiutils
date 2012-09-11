@@ -180,7 +180,7 @@ def update_struct_offsets_for_xref(xref, struct_name):
         for reg in regs['hndl']:
             if GetOpnd(item, 1) == "[%s]" % reg and GetMnem(item) == 'mov' and GetOpnd(item, 0) not in regs:
                 print "  - Found a dereference, tracking register %s" % GetOpnd(item, 0)
-                regs['mov'].append(GetOpnd(item, 0))
+                regs['ptr'].append(GetOpnd(item, 0))
 
         # If we've found an instruction that overwrites a tracked register, stop tracking it
         if GetMnem(item) in ["mov", "lea", "xor"] and GetOpType(item, 0) == o_reg:
