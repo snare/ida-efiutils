@@ -68,6 +68,7 @@ class GUID:
 def go():
     rename_tables()
     update_structs()
+    rename_guids()
 
 
 def rename_tables():
