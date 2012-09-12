@@ -210,25 +210,27 @@ def update_struct_offsets_for_xref(xref, struct_name):
         items = items[idx:]
     else:
         print "  - Xref at 0x%x wasn't marked as a function" % xref
-        cur = xref
+        cur = next_head(xref, idaapi.cvar.inf.maxEA)
         while True:
-            if not isCode(cur) or GetMnem(cur) in ['call', 'jmp']:
+            if cur not in items:
+                items.append(cur)
+                print "adding 0x%x: %s" % (cur, GetDisasm(cur))
+            if GetMnem(cur) in ['call', 'jmp', 'retn']:
                 break
-            items.append(cur)
-            cur = NextAddr(cur)
+            cur = next_head(cur, idaapi.cvar.inf.maxEA)
 
     # Iterate through the rest of the instructions in this function looking for tracked registers with a displacement
     for item in items:
         # Update any call instruction with a displacement from our register
         for op in range(0, 2):
             if GetOpType(item, op) == o_displ and reg_from_displ(GetOpnd(item, op)) in regs['ptr']:
-                print "  - Updating operand %d in instruction: %s" % (op, GetDisasm(item))
+                print "  - Updating operand %d in instruction at 0x%x: %s" % (op, item, GetDisasm(item))
                 OpStroffEx(item, op, GetStrucIdByName(struct_name), 0)
 
         # If we find a mov instruction that dereferences a handle, track the destination register
         for reg in regs['hndl']:
             if GetOpnd(item, 1) == "[%s]" % reg and GetMnem(item) == 'mov' and GetOpnd(item, 0) not in regs:
-                print "  - Found a dereference, tracking register %s" % GetOpnd(item, 0)
+                print "  - Found a dereference at 0x%x, tracking register %s" % (item, GetOpnd(item, 0))
                 regs['ptr'].append(GetOpnd(item, 0))
 
         # If we've found an instruction that overwrites a tracked register, stop tracking it
@@ -256,7 +258,7 @@ def rename_guids():
 
     # Find all the data segments in this binary
     for seg in Segments():
-        if isData(seg) or SegName(seg).startswith('.data'):
+        if isData(GetFlags(seg)):
             print "Processing data segment at 0x%x" % seg
 
             # Find any GUIDs we know about in the data segment
