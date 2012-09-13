@@ -265,11 +265,12 @@ def rename_guids():
             addr = seg
             seg_end = SegEnd(seg)
             while addr < seg_end:
-                d = [Qword(addr), Qword(addr+8)]
-                if d[0] == 0 and d[1] == 0 or d[0] == 0xFFFFFFFFFFFFFFFF and d[1] == 0xFFFFFFFFFFFFFFFF:
+                d = [Dword(addr), Dword(addr+0x4), Dword(addr+0x8), Dword(addr+0xC)]
+                if (d[0] == 0 and d[1] == 0 and d[2] == 0 and d[3] == 0) or \
+                    (d[0] == 0xFFFFFFFF and d[1] == 0xFFFFFFFF and d[2] == 0xFFFFFFFF and d[3] == 0xFFFFFFFF):
                      pass
                 else:
-                    guid = GUID(bytes=struct.pack("<QQ", d[0], d[1]))
+                    guid = GUID(bytes=struct.pack("<LLLL", d[0], d[1], d[2], d[3]))
                     #print "Checking GUID %s at 0x%x" % (str(guid), addr) 
                     gstr = str(guid)
                     if gstr in guids.keys():
@@ -289,7 +290,7 @@ def update_protocol_for_guid(guid_addr):
 
 
 def guid_at_addr(guid_addr):
-    return GUID(bytes=struct.pack("<QQ", Qword(guid_addr), Qword(guid_addr+8)))
+    return GUID(bytes=struct.pack("<LLLL", Dword(guid_addr), Dword(guid_addr + 0x4), Dword(guid_addr + 0x8), Dword(guid_addr + 0xC)))
 
 
 def reg_from_displ(displ):
