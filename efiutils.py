@@ -200,8 +200,10 @@ def update_struct_offsets_for_xref(xref, struct_name):
     # Are we looking at a handle or a pointer?
     if GetMnem(xref) == "mov":
         regs['ptr'].append(GetOpnd(xref, 0))
+        print "  - Tracking pointer register %s at 0x%x: %s" % (regs['ptr'][0], xref, GetDisasm(xref))
     elif GetMnem(xref) == "lea":
         regs['hndl'].append(GetOpnd(xref, 0))
+        print "  - Tracking handle register %s at 0x%x: %s" % (regs['hndl'][0], xref, GetDisasm(xref))
 
     # Get the rest of the instructions in this function
     items = list(FuncItems(xref))
@@ -221,24 +223,39 @@ def update_struct_offsets_for_xref(xref, struct_name):
 
     # Iterate through the rest of the instructions in this function looking for tracked registers with a displacement
     for item in items:
+        regs['nhndl'] = []
+        regs['nptr'] = []
+
         # Update any call instruction with a displacement from our register
         for op in range(0, 2):
             if GetOpType(item, op) == o_displ and reg_from_displ(GetOpnd(item, op)) in regs['ptr']:
                 print "  - Updating operand %d in instruction at 0x%x: %s" % (op, item, GetDisasm(item))
                 OpStroffEx(item, op, GetStrucIdByName(struct_name), 0)
 
+        # If we find a mov instruction that copies a tracked register, track the new register
+        if GetMnem(item) == 'mov':
+            if GetOpnd(item, 1) in regs['ptr'] and GetOpnd(item, 0) not in regs['ptr']:
+                print "  - Copied tracked register at 0x%x, tracking register %s" % (item, GetOpnd(item, 0))
+                regs['ptr'].append(GetOpnd(item, 0))
+                regs['nptr'].append(GetOpnd(item, 0))
+            if GetOpnd(item, 1) in regs['hndl'] and GetOpnd(item, 0) not in regs['hndl']:
+                print "  - Copied tracked register at 0x%x, tracking register %s" % (item, GetOpnd(item, 0))
+                regs['hndl'].append(GetOpnd(item, 0))
+                regs['nhndl'].append(GetOpnd(item, 0))
+
         # If we find a mov instruction that dereferences a handle, track the destination register
         for reg in regs['hndl']:
-            if GetOpnd(item, 1) == "[%s]" % reg and GetMnem(item) == 'mov' and GetOpnd(item, 0) not in regs:
+            if GetOpnd(item, 1) == "[%s]" % reg and GetMnem(item) == 'mov' and GetOpnd(item, 0) not in regs['ptr']:
                 print "  - Found a dereference at 0x%x, tracking register %s" % (item, GetOpnd(item, 0))
                 regs['ptr'].append(GetOpnd(item, 0))
+                regs['nptr'].append(GetOpnd(item, 0))
 
         # If we've found an instruction that overwrites a tracked register, stop tracking it
-        if GetMnem(item) in ["mov", "lea", "xor"] and GetOpType(item, 0) == o_reg:
-            if GetOpnd(item, 0) in regs['ptr']:
+        if GetMnem(item) in ["mov", "lea"] and GetOpType(item, 0) == o_reg:
+            if GetOpnd(item, 0) in regs['ptr'] and GetOpnd(item, 0) not in regs['nptr']:
                 print "  - Untracking pointer register %s: " % GetOpnd(item, 0) + GetDisasm(item)
                 regs['ptr'].remove(GetOpnd(item, 0))
-            elif GetOpnd(item, 0) in regs['hndl']:
+            elif GetOpnd(item, 0) in regs['hndl'] and GetOpnd(item, 0) not in regs['nhndl']:
                 print "  - Untracking handle register %s: " % GetOpnd(item, 0) + GetDisasm(item)
                 regs['hndl'].remove(GetOpnd(item, 0))
 
