@@ -55,7 +55,7 @@ struct _LIST_ENTRY {
 LIST_ENTRY *ForwardLink;
 LIST_ENTRY *BackLink;
 };
-typedef __builtin_va_list VA_LIST;
+//typedef __builtin_va_list VA_LIST;
 typedef UINTN *BASE_LIST;
 typedef UINTN RETURN_STATUS;
 typedef GUID EFI_GUID;
@@ -5524,7 +5524,8 @@ CHAR16*
 CatVSPrint (
 CHAR16 *String,
 const CHAR16 *FormatString,
-VA_LIST Marker
+//VA_LIST Marker
+void *
 );
 CHAR16 *
 
