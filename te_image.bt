@@ -1,0 +1,50 @@
+// te_image.bt - a basic TE image template for 010 Editor
+//
+// See the following URL for more info and the latest version:
+// https://github.com/snarez/ida-efiutils
+//
+// -snare
+
+local int32 i;
+
+typedef UBYTE UINT8;
+
+typedef struct {
+    UINT32 VirtualAddress;
+    UINT32 Size;
+} EFI_IMAGE_DATA_DIRECTORY;
+
+typedef struct {
+    UINT16                   Signature;
+    UINT16                   Machine;
+    UINT8                    NumberOfSections;
+    UINT8                    Subsystem;
+    UINT16                   StrippedSize;
+    UINT32                   AddressOfEntryPoint;
+    UINT32                   BaseOfCode;
+    UINT64                   ImageBase;
+    EFI_IMAGE_DATA_DIRECTORY DataDirectory[2];
+} TEImageHeader;
+
+typedef struct{
+    char    Name[8];
+    int32   VirtualSize; 
+    int32   VirtualAddress; 
+    int32   SizeOfRawData;   
+    int32   PointerToRawData;  
+    int32   PointerToRelocations;  
+    int32   PointerToLinenumbers; 
+    int16   NumberOfRelocations;   
+    int16    NumberOfLinenumbers; 
+    int32   Characteristics;  
+} SectionHeader;
+
+struct SectionData (int size) {
+    char data[size];
+};
+
+TEImageHeader header;
+SectionHeader sec_header[header.NumberOfSections];
+for (i = 0; i < header.NumberOfSections; i++) {
+    SectionData section(sec_header[i].SizeOfRawData);
+}

@@ -12,6 +12,10 @@ This package contains the following files:
 
 4. `structs.idc` - An IDC script containing some struct definitions (superseded by `behemoth.h`)
 
+5. `te_image.bt` - An 010 Editor template for TE binary images
+
+6. `te_loader.py` - An IDA Pro loader script for TE binary images
+
 This is my first attempt at IDA scripting, so please forgive me and let me know if I've reinvented wheels/done anything silly.
 
 ## Functions
@@ -68,3 +72,5 @@ Convenience method that does all of the above.
 5. Have a look at the code/docstrings, but probably:
 
 		import efiutils; efiutils.go()
+
+To use the `te_loader.py` TE image loader, install it as you would any other loader. On OS X this is done by copying or symlinking it inside the loaders folder at `idaq.app/Contents/MacOS/loaders/`.
