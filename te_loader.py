@@ -127,7 +127,6 @@ def load_file(f, neflags, format):
 		add_segm(0, sec.virt_addr, sec.virt_addr + sec.virt_size, sec.name, seg_type)
 		set_segm_addressing(get_segm_by_name(sec.name), seg_mode)
 
-	print "add_entry(%x, ..." % (te.entry_point_addr)
 	add_entry(te.entry_point_addr, te.entry_point_addr, "_start", 1)
 
 	return 1
