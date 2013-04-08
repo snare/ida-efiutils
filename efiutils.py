@@ -52,7 +52,6 @@ class GUID:
             (self.Data1, self.Data2, self.Data3, self.Data4) = (array[0], array[1], array[2], array[3:])
 
     def __str__(self):
-        d = self.Data4
         return "%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x" % tuple(self.array())
 
     def bytes(self):
@@ -185,7 +184,7 @@ def update_struct_offsets(data_addr, struct_name):
     for xref in xrefs:
         # We're only interested in xrefs in code where the left operand is a register, and the right operand is the
         # memory address of our data structure.
-        if GetOpType(xref, 0) == o_reg and GetOpType(xref, 1) == o_mem or GetOperandValue(xref, 1) == struct_name:
+        if GetOpType(xref, 0) == o_reg and GetOpType(xref, 1) == o_mem and GetOperandValue(xref, 1) == struct_name:
             print "Processing xref from 0x%x: %s" % (xref, GetDisasm(xref))
             update_struct_offsets_for_xref(xref, struct_name)
         else:
@@ -302,8 +301,26 @@ def update_protocols():
     pass
 
 
-def update_protocol_for_guid(guid_addr):
-    pass
+def update_protocol(guid_addr, protocol):
+    # # Find xrefs to this GUID
+    # xrefs = list(DataRefsTo(guid_addr))
+    # print "Found %d xrefs to GUID %s" % (len(xrefs), str(guid_at_addr(guid_addr)))
+
+    # # Process xrefs
+    # for xref in xrefs:
+    #     # We're only interested in xrefs in code where the left operand is a register, and the right operand is the
+    #     # memory address of our GUID.
+    #     if GetOpType(xref, 0) == o_reg and GetOpType(xref, 1) == o_mem and GetOperandValue(xref, 1) == struct_name:
+    #         print "Processing xref from 0x%x: %s" % (xref, GetDisasm(xref))
+    #         update_struct_offsets_for_xref(xref, struct_name)
+    #     else:
+    #         print "Too hard basket - xref from 0x%x: %s" % (xref, GetDisasm(xref))
+
+
+
+
+def find_struct_refs():
+    isStroff(GetFlags(here()), 0)
 
 
 def guid_at_addr(guid_addr):
