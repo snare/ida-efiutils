@@ -8,13 +8,15 @@ This package contains the following files:
 
 2. `efiguids.py` - A collection of known GUIDs for EFI protocols
 
-3. `behemoth.h` - A giant header containing a collection of type and structure definitions for EFI
+3. `efiguids_ami.py` - A collection of known GUIDs for protocols used in the AMI BIOS
 
-4. `structs.idc` - An IDC script containing some struct definitions (superseded by `behemoth.h`)
+4. `behemoth.h` - A giant header containing a collection of type and structure definitions for EFI
 
-5. `te_image.bt` - An 010 Editor template for TE binary images
+5. `structs.idc` - An IDC script containing some struct definitions (superseded by `behemoth.h`)
 
-6. `te_loader.py` - An IDA Pro loader script for TE binary images
+6. `te_image.bt` - An 010 Editor template for TE binary images
+
+7. `te_loader.py` - An IDA Pro loader script for TE binary images
 
 This is my first attempt at IDA scripting, so please forgive me and let me know if I've reinvented wheels/done anything silly.
 
