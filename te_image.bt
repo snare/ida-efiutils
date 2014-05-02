@@ -45,6 +45,8 @@ struct SectionData (int size) {
 
 TEImageHeader header;
 SectionHeader sec_header[header.NumberOfSections];
+
 for (i = 0; i < header.NumberOfSections; i++) {
+    FSeek(sec_header[i].PointerToRawData - header.StrippedSize + sizeof(header));
     SectionData section(sec_header[i].SizeOfRawData);
 }

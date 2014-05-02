@@ -121,6 +121,7 @@ def load_file(f, neflags, format):
 
 	# load binary
 	for sec in te.sections:
+		f.seek(sec.ptr_to_data - te.stripped_size + 24)
 		seg_type = SECTION_CLASSES[sec.name] if sec.name in SECTION_CLASSES.keys() else "DATA"
 		seg_mode = SECTION_MODES[sec.name] if sec.name in SECTION_MODES.keys() else 1
 		f.file2base(f.tell(), sec.virt_addr, sec.virt_addr + sec.data_size, 1)
